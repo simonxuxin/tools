@@ -1,0 +1,28 @@
+#!/usr/bin/zsh
+
+this=${0##*/}
+usage() {
+    echo "Usage: $this <word>"
+}
+
+argc=$#
+[[ $argc -ne 1 ]] && { usage ; exit 1 ; }
+
+word=$1
+target="http://dict.cn/ws.php?utf8=true&q=$word"
+IFS=\>
+curl -s $target | while read -d \< tag content
+do
+    if [[ "$tag" == "pron" ]] ; then
+        for point in `echo "[$content]" | sed -e 's/&#/>/g' -e 's/;/>/g'`
+        do
+            test $point -eq $point 2>/dev/null && \
+                { hex=`echo $point 16 o p | dc` ; echo -e -n "\\u$hex" ; } || \
+                echo -n $point
+        done
+        echo
+    fi
+
+    [[ "$tag" == "def" ]] && echo $content
+done
+unset IFS

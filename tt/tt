@@ -1,4 +1,4 @@
-#!/usr/bin/zsh
+#!/usr/bin/env zsh
 
 this=${0##*/}
 usage() {
@@ -14,7 +14,7 @@ IFS=\>
 curl -s $target | while read -d \< tag content
 do
     if [[ "$tag" == "pron" ]] ; then
-        for point in `echo "[$content]" | sed -e 's/&#/>/g' -e 's/;/>/g'`
+        for point in `echo "[$content]" | sed -e 's/&#/>/g' -e 's/;/>/g' | sed -e 's/>>/>/g'`
         do
             test $point -eq $point 2>/dev/null && \
                 { hex=`echo $point 16 o p | dc` ; echo -e -n "\\u$hex" ; } || \

@@ -1,90 +1,85 @@
-" {{{
-function! XX_CompileCode()
+" Global Variables {{{
+if exists("g:xxide_split_height") == 0
+    let g:xxide_split_height = 10
+endif
+
+let g:script_languages = {
+    \ 'perl': ['perl'], 
+    \ 'python': ['python'], 
+    \ 'sh': ['sh', 'bash', 'ksh'],
+    \}
+
+" }}} 
+"
+" Main Entry {{{
+function! XxIDE_Execute()
     let ft = &filetype
-    execute "compiler " . ft
-    silent make
-    copen
-endfunction
-" }}}
-
-" {{{
-function! XX_ExecuteCode()
-    let ft = &filetype
-    if ft == "perl"
-        setlocal makeprg=perl\ %
-    endif
-    silent make
-    copen
-endfunction
-" }}}
-
-" {{{
-function! XX_ExecuteSQL()
-    while exists("w:db_driver") == 0
-        let w:db_driver = input("DB Driver: ")
-    endwhile
-
-    if w:db_driver ==? "postgresql" || w:db_driver ==? "pg"
-        call XX_GetDBLogon()
-        while exists("w:db_name") == 0
-            let w:db_name = input("DB Name: ")
-        endwhile
-        let tempf = tempname()
-        silent execute "write ! psql -U " . w:db_user . " -d " . w:db_name . " > " . tempf
-        silent execute "split " . tempf
-    elseif w:db_driver ==? "teradata" || w:db_driver ==? "td"
-        while exists("w:db_host") == 0
-            let w:db_host = input("DB Host: ")
-        endwhile
-        call XX_GetDBLogon()
-        let tempf = tempname()
-        let templ = tempname()
-        silent execute "write ! echo .logon " . w:db_host . "/" . w:db_user . "," . w:db_pass . " > " . tempf
-        silent execute "write ! echo .set width 9999 >> " . tempf
-        silent execute "write ! echo .set errorout stdout >> " . tempf
-        silent execute "write >> " . tempf
-        silent execute "write ! bteq < " . tempf . " > " . templ
-        silent execute "split " . templ
+    if ft == ""
+        echo "Unknow Filetype"
+    elseif ft == "vim"
+        call XxIDE_VimExecute()
+    else
+        call XxIDE_ExternalExecute(ft)
     endif
 endfunction
 " }}}
+"
+" External Execution {{{
+function! XxIDE_ExternalExecute(ft)
+    let fn = expand("%:p")
+    let execCmd = XxIDE_GetExecuteString(a:ft, fn)
 
-" {{{
-function! XX_GetDBLogon()
-    while exists("w:db_user") == 0
-        let w:db_user = input("DB Username: ")
-    endwhile
-
-    if exists("w:db_pass") == 0
-        let w:db_pass = escape(inputsecret("DB Password: "), "%#!$")
+    if execCmd == ""
+        return
     endif
+
+    set splitbelow
+    silent execute g:Xxide_split_height . "new"
+    silent execute "read " . execCmd
+    1d
+    setlocal nomodifiable nomodified
 endfunction
 " }}}
-
-" {{{
-function! XX_UnsetDBLogon()
-    if exists("w:db_driver")
-        unlet w:db_driver
-    endif
-    if exists("w:db_user")
-        unlet w:db_user
-    endif
-    if exists("w:db_pass")
-        unlet w:db_pass
-    endif
-    if exists("w:db_name")
-        unlet w:db_name
-    endif
-    if exists("w:db_host")
-        unlet w:db_host
-    endif
+"
+" Vim Execution {{{
+function! XxIDE_VimExecute()
+    source %
 endfunction
 " }}}
-
-" {{{
-map <F6> : call XX_CompileCode()<CR>
-map <F5> : call XX_ExecuteCode()<CR>
-map <F12> <C-W><C-O>: call XX_ExecuteSQL()<CR>
-command RESET call XX_UnsetDBLogon()
+"
+" Get Execution Command Line {{{ 
+function! XxIDE_GetExecuteString(ft, fn)
+    let args = []
+    if index(keys(g:script_languages), a:ft) != -1
+        if(len(g:script_languages[a:ft]) == 1)
+            let cmd = g:script_languages[a:ft][0]
+        else
+            if exists("w:shcmd")
+                let cmd = w:shcmd
+            endif
+            while exists("cmd") == 0
+                let cmd = input("Select Shell (" . join(g:script_languages[a:ft], "/") . ") ")
+                if index(g:script_languages[a:ft], cmd) == -1
+                    unlet cmd
+                else
+                    let w:shcmd = cmd
+                endif
+            endwhile
+        endif
+        call extend(args, ["!", cmd, a:fn])
+        call extend(args, XxIDE_GetExecuteParams())
+    endif 
+    return join(args, " ")    
+endfunction
 " }}}
-
+"
+" Get Execution Parameters {{{
+function! XxIDE_GetExecuteParams()
+    let params = input("Any Parameters? ")
+    return split(params, " ")
+endfunction
+" }}}
+"
+" Add Map {{{
+nmap <F5> <C-W><C-O>:call XxIDE_Execute()<CR>
+" }}}

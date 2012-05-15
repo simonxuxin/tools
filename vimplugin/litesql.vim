@@ -2,7 +2,7 @@
 " }}}
 "
 " Execute SQL {{{
-function! XX_ExecuteSQL()
+function! LiteSQL_ExecuteSQL()
     while exists("w:db_driver") == 0
         let w:db_driver = input("DB Driver: ")
     endwhile
@@ -10,18 +10,18 @@ function! XX_ExecuteSQL()
     set splitbelow
 
     if w:db_driver ==? "postgresql" || w:db_driver ==? "pg"
-        call XX_GetDBLogon()
+        call LiteSQL_GetDBLogon()
         while exists("w:db_name") == 0
             let w:db_name = input("DB Name: ")
         endwhile
         let templ = tempname()
         silent execute "write ! psql -U " . w:db_user . " -d " . w:db_name . " > " . templ . " 2>&1"
-        call XX_PumpResult(templ)
+        call LiteSQL_PumpResult(templ)
     elseif w:db_driver ==? "teradata" || w:db_driver ==? "td"
         while exists("w:db_host") == 0
             let w:db_host = input("DB Host: ")
         endwhile
-        call XX_GetDBLogon()
+        call LiteSQL_GetDBLogon()
         let tempf = tempname()
         let templ = tempname()
         "
@@ -33,13 +33,13 @@ function! XX_ExecuteSQL()
         
         silent execute "write ! bteq < " . tempf . " > " . templ
         silent execute "split " . templ
-        call XX_PumpResult(templ)
+        call LiteSQL_PumpResult(templ)
     endif
 endfunction
 " }}}
 "
 " Get DB Logon {{{
-function! XX_GetDBLogon()
+function! LiteSQL_GetDBLogon()
     while exists("w:db_user") == 0
         let w:db_user = input("DB Username: ")
     endwhile
@@ -51,14 +51,14 @@ endfunction
 " }}}
 "
 " Pump Result {{{
-function XX_PumpResult(tf)
+function LiteSQL_PumpResult(tf)
     silent execute "new " . a:tf
     setlocal nomodifiable nomodified
 endfunction
 " }}}
 "
 " Reset DB Info {{{
-function! XX_UnsetDBLogon()
+function! LiteSQL_UnsetDBLogon()
     if exists("w:db_driver")
         unlet w:db_driver
     endif
@@ -78,7 +78,7 @@ endfunction
 " }}}
 "
 " Add Map, Setup Command {{{
-map <F12> <C-W><C-O>: call XX_ExecuteSQL()<CR>
-command RESET call XX_UnsetDBLogon()
+map <F12> <C-W><C-O>: call LiteSQL_ExecuteSQL()<CR>
+command RESET call LiteSQL_UnsetDBLogon()
 " }}}
 

@@ -10,13 +10,19 @@ argc=$#
 
 word=$1
 target="http://dict-co.iciba.com/api/dictionary.php?w=$word"
-IFS=\>
-curl -s $target | while read -d \< tag content
+curl -s $target | tr '<>/' '|' | while read line
 do
-    case $tag in
-        ps)          echo -n [$content] ;;
-        pos)         echo ; echo -n -e "\033[1m$content\033[m"|sed -e 's/\&amp;/\&/' ;;
-        acceptation) echo ; echo -n $content ;;
-    esac
+    #echo $line
+    tag=$(echo $line | awk -F '|' '{print $2}')
+    content=$(echo $line | awk -F '|' '{print $3}')
+
+    if [ "$content" ]
+    then
+        case $tag in
+            ps)          echo [$content] ;;
+            pos)         echo -n -e "\033[1m$content\033[m"|sed -e 's/\&amp;/\&/' ;;
+            acceptation) echo $content ;;
+        esac
+    fi
 done
-unset IFS
+echo
